@@ -18,7 +18,7 @@
    - Correr o ficheiro `supabase/schema.sql`.
    - Correr o ficheiro `supabase/policies.sql`.
 
-4. Criar ficheiro `.env.local`:
+4. Criar ficheiro `.env.local` (podes copiar `.env.example`):
    ```bash
    NEXT_PUBLIC_SUPABASE_URL=
    NEXT_PUBLIC_SUPABASE_ANON_KEY=
