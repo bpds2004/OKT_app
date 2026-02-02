@@ -35,3 +35,6 @@ npm run db:seed
 ```bash
 npm run db:studio
 ```
+
+## Artigos
+Para adicionar um artigo, cria um ficheiro `.md` em `content/artigos/` com o frontmatter necessário e faz deploy. Os artigos publicados (`published: true`) aparecem automaticamente na homepage e em `/artigos`.

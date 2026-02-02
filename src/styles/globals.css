@@ -22,3 +22,35 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+.markdown > * + * {
+  margin-top: 1rem;
+}
+
+.markdown h2 {
+  @apply text-base font-semibold text-brand-800;
+}
+
+.markdown h3 {
+  @apply text-sm font-semibold text-brand-700;
+}
+
+.markdown p {
+  @apply text-sm text-brand-600;
+}
+
+.markdown ul {
+  @apply list-disc space-y-2 pl-5 text-sm text-brand-600;
+}
+
+.markdown ol {
+  @apply list-decimal space-y-2 pl-5 text-sm text-brand-600;
+}
+
+.markdown blockquote {
+  @apply border-l-2 border-brand-200 pl-3 text-xs text-brand-500;
+}
+
+.markdown strong {
+  @apply font-semibold text-brand-700;
+}
