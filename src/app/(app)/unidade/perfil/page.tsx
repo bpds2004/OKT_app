@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function UnidadePerfilPage() {
   const { t } = useLanguage();
@@ -23,25 +24,29 @@ export default function UnidadePerfilPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch("/api/me");
-        if (!response.ok) {
+        const { data: userInfo } = await supabase.auth.getUser();
+        if (!userInfo.user) {
           setProfile(null);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          user: {
-            name: string;
-            email: string;
-            unitProfile: { healthUnit: { name: string; address: string; code: string } } | null;
-          };
-        };
+        const { data, error } = await supabase
+          .from("unit_profiles")
+          .select("health_units(name, address, code)")
+          .eq("user_id", userInfo.user.id)
+          .single();
+        if (error || !data) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        const unit = Array.isArray(data.health_units) ? data.health_units[0] : data.health_units;
         setProfile({
-          name: data.user.name,
-          email: data.user.email,
-          healthUnitName: data.user.unitProfile?.healthUnit.name ?? null,
-          healthUnitAddress: data.user.unitProfile?.healthUnit.address ?? null,
-          healthUnitCode: data.user.unitProfile?.healthUnit.code ?? null,
+          name: userInfo.user.user_metadata?.name ?? "",
+          email: userInfo.user.email ?? "",
+          healthUnitName: unit?.name ?? null,
+          healthUnitAddress: unit?.address ?? null,
+          healthUnitCode: unit?.code ?? null,
         });
       } catch {
         setProfile(null);

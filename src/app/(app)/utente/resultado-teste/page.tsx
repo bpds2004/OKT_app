@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 type ReportData = {
   id: string;
@@ -33,42 +34,39 @@ export default function ResultadoTestePage() {
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const response = await fetch("/api/utente/reports");
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from("tests")
+          .select(
+            "id, created_at, test_results(id, summary, risk_level, identified_variables(id, name, significance, recommendation))",
+          )
+          .order("created_at", { ascending: false });
+        if (error || !data) {
           setReport(null);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          tests: {
-            id: string;
-            createdAt: string;
-            patient: { name: string } | null;
-            result: {
-              summary: string;
-              riskLevel: string;
-              variables: {
-                id: string;
-                name: string;
-                significance: string;
-                recommendation: string;
-              }[];
-            } | null;
-          }[];
-        };
-        const selected = data.tests.find((test) => test.id === requestedId) ?? data.tests[0];
-        if (!selected || !selected.result) {
+        const selected = data.find((test) => test.id === requestedId) ?? data[0];
+        const result = Array.isArray(selected?.test_results)
+          ? selected?.test_results[0]
+          : selected?.test_results;
+        if (!selected || !result) {
           setReport(null);
           setLoading(false);
           return;
         }
+        const { data: userInfo } = await supabase.auth.getUser();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", userInfo?.user?.id ?? "")
+          .single();
         setReport({
           id: selected.id,
-          createdAt: selected.createdAt,
-          patientName: selected.patient?.name ?? t("result.unknownPatient"),
-          resultSummary: selected.result.summary,
-          riskLevel: selected.result.riskLevel,
-          variables: selected.result.variables ?? [],
+          createdAt: selected.created_at,
+          patientName: profile?.name ?? t("result.unknownPatient"),
+          resultSummary: result.summary,
+          riskLevel: result.risk_level,
+          variables: result.identified_variables ?? [],
         });
       } catch {
         setReport(null);

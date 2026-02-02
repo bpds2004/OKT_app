@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function RegistoPage() {
   const { t } = useLanguage();
@@ -35,7 +36,7 @@ export default function RegistoPage() {
       phone: String(formData.get("phone") ?? ""),
       nif: String(formData.get("nif") ?? ""),
       birthDate: String(formData.get("birthDate") ?? ""),
-      address: String(formData.get("address") ?? ""),
+      address: String(formData.get("medicalHistory") ?? ""),
       healthNumber: String(formData.get("healthNumber") ?? ""),
       healthUnitName: String(formData.get("fullName") ?? ""),
       healthUnitAddress: String(formData.get("unitAddress") ?? ""),
@@ -59,6 +60,7 @@ export default function RegistoPage() {
     }
 
     event.currentTarget.reset();
+    await supabase.auth.signOut();
     setMessage({ type: "success", text: t("register.success") });
   };
 

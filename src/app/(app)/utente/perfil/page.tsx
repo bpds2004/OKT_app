@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function PerfilPage() {
   const { t } = useLanguage();
@@ -25,33 +26,33 @@ export default function PerfilPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch("/api/me");
-        if (!response.ok) {
+        const { data: userInfo } = await supabase.auth.getUser();
+        if (!userInfo.user) {
           setProfile(null);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          user: {
-            name: string;
-            email: string;
-            patientProfile: {
-              phone?: string | null;
-              nif?: string | null;
-              birthDate?: string | null;
-              healthNumber?: string | null;
-              address?: string | null;
-            } | null;
-          };
-        };
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("name, patient_profiles(phone, nif, birth_date, address, health_number)")
+          .eq("id", userInfo.user.id)
+          .single();
+        if (error || !data) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        const patientProfile = Array.isArray(data.patient_profiles)
+          ? data.patient_profiles[0]
+          : data.patient_profiles;
         setProfile({
-          name: data.user.name,
-          email: data.user.email,
-          phone: data.user.patientProfile?.phone ?? null,
-          nif: data.user.patientProfile?.nif ?? null,
-          birthDate: data.user.patientProfile?.birthDate ?? null,
-          healthNumber: data.user.patientProfile?.healthNumber ?? null,
-          medicalHistory: data.user.patientProfile?.address ?? null,
+          name: data.name,
+          email: userInfo.user.email ?? "",
+          phone: patientProfile?.phone ?? null,
+          nif: patientProfile?.nif ?? null,
+          birthDate: patientProfile?.birth_date ?? null,
+          healthNumber: patientProfile?.health_number ?? null,
+          medicalHistory: patientProfile?.address ?? null,
         });
       } catch {
         setProfile(null);

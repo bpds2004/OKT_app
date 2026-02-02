@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { User } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function EditarPerfilPage() {
   const { t } = useLanguage();
@@ -25,34 +26,33 @@ export default function EditarPerfilPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch("/api/me");
-        if (!response.ok) {
+        const { data: userInfo } = await supabase.auth.getUser();
+        if (!userInfo.user) {
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          user: {
-            name: string;
-            email: string;
-            patientProfile: {
-              phone?: string | null;
-              nif?: string | null;
-              birthDate?: string | null;
-              healthNumber?: string | null;
-              address?: string | null;
-            } | null;
-          };
-        };
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("name, patient_profiles(phone, nif, birth_date, address, health_number)")
+          .eq("id", userInfo.user.id)
+          .single();
+        if (error || !data) {
+          setLoading(false);
+          return;
+        }
+        const patientProfile = Array.isArray(data.patient_profiles)
+          ? data.patient_profiles[0]
+          : data.patient_profiles;
         setFormData({
-          fullName: data.user.name,
-          email: data.user.email,
-          phone: data.user.patientProfile?.phone ?? "",
-          healthNumber: data.user.patientProfile?.healthNumber ?? "",
-          nif: data.user.patientProfile?.nif ?? "",
-          birthDate: data.user.patientProfile?.birthDate
-            ? new Date(data.user.patientProfile.birthDate).toISOString().split("T")[0]
+          fullName: data.name,
+          email: userInfo.user.email ?? "",
+          phone: patientProfile?.phone ?? "",
+          healthNumber: patientProfile?.health_number ?? "",
+          nif: patientProfile?.nif ?? "",
+          birthDate: patientProfile?.birth_date
+            ? new Date(patientProfile.birth_date).toISOString().split("T")[0]
             : "",
-          medicalHistory: data.user.patientProfile?.address ?? "",
+          medicalHistory: patientProfile?.address ?? "",
           familyDoctor: "",
         });
       } finally {
@@ -66,10 +66,32 @@ export default function EditarPerfilPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const { data: userInfo } = await supabase.auth.getUser();
+    if (!userInfo.user) {
+      return;
+    }
+    await supabase
+      .from("profiles")
+      .update({ name: formData.fullName })
+      .eq("id", userInfo.user.id);
+    await supabase
+      .from("patient_profiles")
+      .update({
+        phone: formData.phone || null,
+        nif: formData.nif || null,
+        birth_date: formData.birthDate ? new Date(formData.birthDate).toISOString() : null,
+        address: formData.medicalHistory || null,
+        health_number: formData.healthNumber || null,
+      })
+      .eq("user_id", userInfo.user.id);
+  };
+
   return (
     <PageTransition>
       <MobileShell title={t("profile.editProfile")} icon={<User className="h-5 w-5" />} backHref="/utente/perfil">
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="text-sm font-semibold text-brand-700">{t("profile.deviceId")}</label>
             <Input value={t("profile.deviceUnavailable")} className="mt-2" disabled />
@@ -148,7 +170,9 @@ export default function EditarPerfilPage() {
             />
           </div>
           <div className="space-y-3 pt-4">
-            <Button className="w-full">{t("common.save")}</Button>
+            <Button className="w-full" type="submit">
+              {t("common.save")}
+            </Button>
             <Button
               variant="outline"
               className="w-full"

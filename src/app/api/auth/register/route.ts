@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { hash } from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 const registerSchema = z.object({
   role: z.enum(["UTENTE", "UNIDADE_SAUDE"]),
-  name: z.string().min(2),
+  name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
   phone: z.string().optional(),
@@ -25,69 +24,88 @@ export async function POST(request: Request) {
   }
 
   const data = payload.data;
-  const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
-  if (existingUser) {
+  const { data: existing } = await supabaseAdmin.auth.admin.getUserByEmail(data.email);
+  if (existing?.user) {
     return NextResponse.json({ error: "EMAIL_EXISTS" }, { status: 409 });
   }
 
-  const passwordHash = await hash(data.password, 10);
-
-  if (data.role === "UTENTE") {
-    const birthDate =
-      data.birthDate && data.birthDate.trim() !== ""
-        ? new Date(data.birthDate)
-        : undefined;
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash,
-        role: "UTENTE",
-        name: data.name,
-        patientProfile: {
-          create: {
-            phone: data.phone,
-            nif: data.nif,
-            birthDate,
-            address: data.address,
-            healthNumber: data.healthNumber,
-          },
-        },
-      },
+  const { data: createdUser, error: createError } =
+    await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
     });
 
-    return NextResponse.json({ id: user.id });
+  if (createError || !createdUser.user) {
+    return NextResponse.json({ error: "CREATE_FAILED" }, { status: 500 });
   }
 
-  if (!data.healthUnitName || !data.healthUnitAddress || !data.healthUnitCode) {
-    return NextResponse.json({ error: "HEALTH_UNIT_REQUIRED" }, { status: 400 });
+  const userId = createdUser.user.id;
+
+  const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+    id: userId,
+    role: data.role,
+    name: data.name,
+  });
+
+  if (profileError) {
+    return NextResponse.json({ error: "PROFILE_FAILED" }, { status: 500 });
   }
 
-  const healthUnit = await prisma.healthUnit.upsert({
-    where: { code: data.healthUnitCode },
-    update: {
-      name: data.healthUnitName,
-      address: data.healthUnitAddress,
-    },
-    create: {
-      name: data.healthUnitName,
-      address: data.healthUnitAddress,
-      code: data.healthUnitCode,
-    },
-  });
+  if (data.role === "UTENTE") {
+    const { error: patientError } = await supabaseAdmin.from("patient_profiles").insert({
+      user_id: userId,
+      phone: data.phone || null,
+      nif: data.nif || null,
+      birth_date: data.birthDate ? new Date(data.birthDate).toISOString() : null,
+      address: data.address || null,
+      health_number: data.healthNumber || null,
+    });
 
-  const user = await prisma.user.create({
-    data: {
-      email: data.email,
-      passwordHash,
-      role: "UNIDADE_SAUDE",
-      name: data.name,
-      unitProfile: {
-        create: {
-          healthUnitId: healthUnit.id,
-        },
-      },
-    },
-  });
+    if (patientError) {
+      return NextResponse.json({ error: "PATIENT_PROFILE_FAILED" }, { status: 500 });
+    }
+  }
 
-  return NextResponse.json({ id: user.id });
+  if (data.role === "UNIDADE_SAUDE") {
+    const unitCode = data.healthUnitCode || "";
+    const { data: unitMatch, error: unitFetchError } = await supabaseAdmin
+      .from("health_units")
+      .select("id")
+      .eq("code", unitCode)
+      .maybeSingle();
+
+    if (unitFetchError) {
+      return NextResponse.json({ error: "UNIT_LOOKUP_FAILED" }, { status: 500 });
+    }
+
+    let healthUnitId = unitMatch?.id;
+    if (!healthUnitId) {
+      const { data: createdUnit, error: unitCreateError } = await supabaseAdmin
+        .from("health_units")
+        .insert({
+          name: data.healthUnitName || data.name,
+          address: data.healthUnitAddress || null,
+          code: unitCode,
+        })
+        .select("id")
+        .single();
+
+      if (unitCreateError || !createdUnit) {
+        return NextResponse.json({ error: "UNIT_CREATE_FAILED" }, { status: 500 });
+      }
+      healthUnitId = createdUnit.id;
+    }
+
+    const { error: unitProfileError } = await supabaseAdmin.from("unit_profiles").insert({
+      user_id: userId,
+      health_unit_id: healthUnitId,
+    });
+
+    if (unitProfileError) {
+      return NextResponse.json({ error: "UNIT_PROFILE_FAILED" }, { status: 500 });
+    }
+  }
+
+  return NextResponse.json({ id: userId });
 }

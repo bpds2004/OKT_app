@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function AlterarPasswordPage() {
   const { t } = useLanguage();
@@ -32,12 +33,23 @@ export default function AlterarPasswordPage() {
       setMessage({ type: "error", text: t("password.mismatch") });
       return;
     }
-    const response = await fetch("/api/auth/password", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
+    const { data: userInfo } = await supabase.auth.getUser();
+    if (!userInfo.user?.email) {
+      setMessage({ type: "error", text: t("password.invalidCurrent") });
+      return;
+    }
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userInfo.user.email,
+      password: currentPassword,
     });
-    if (!response.ok) {
+    if (signInError) {
+      setMessage({ type: "error", text: t("password.invalidCurrent") });
+      return;
+    }
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (updateError) {
       setMessage({ type: "error", text: t("password.invalidCurrent") });
       return;
     }
