@@ -32,7 +32,7 @@ create table if not exists tests (
   id uuid primary key default gen_random_uuid(),
   patient_user_id uuid not null references profiles(id) on delete cascade,
   health_unit_id uuid not null references health_units(id) on delete cascade,
-  status text not null,
+  status text not null default 'PENDING' check (status in ('PENDING', 'DONE')),
   created_at timestamptz not null default now()
 );
 
@@ -40,7 +40,7 @@ create table if not exists test_results (
   id uuid primary key default gen_random_uuid(),
   test_id uuid unique not null references tests(id) on delete cascade,
   summary text,
-  risk_level text,
+  risk_level text check (risk_level is null or risk_level in ('LOW', 'MEDIUM', 'HIGH', 'POSITIVE', 'NEGATIVE')),
   created_at timestamptz not null default now()
 );
 

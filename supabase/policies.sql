@@ -17,7 +17,8 @@ create policy "profiles_insert_own"
 
 create policy "profiles_update_own"
   on profiles for update
-  using (id = auth.uid());
+  using (id = auth.uid())
+  with check (id = auth.uid());
 
 create policy "profiles_select_unit_patients"
   on profiles for select
@@ -50,6 +51,10 @@ create policy "patient_profiles_update_own"
   using (
     user_id = auth.uid()
     and exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'UTENTE')
+  )
+  with check (
+    user_id = auth.uid()
+    and exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'UTENTE')
   );
 
 create policy "unit_profiles_select_own"
@@ -79,6 +84,14 @@ create policy "health_units_update_unit"
       where up.user_id = auth.uid()
         and up.health_unit_id = health_units.id
     )
+  )
+  with check (
+    exists (
+      select 1
+      from unit_profiles up
+      where up.user_id = auth.uid()
+        and up.health_unit_id = health_units.id
+    )
   );
 
 create policy "tests_select_own"
@@ -87,7 +100,10 @@ create policy "tests_select_own"
 
 create policy "tests_insert_own"
   on tests for insert
-  with check (patient_user_id = auth.uid());
+  with check (
+    patient_user_id = auth.uid()
+    and exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'UTENTE')
+  );
 
 create policy "tests_select_unit"
   on tests for select
@@ -103,6 +119,14 @@ create policy "tests_select_unit"
 create policy "tests_update_unit"
   on tests for update
   using (
+    exists (
+      select 1
+      from unit_profiles up
+      where up.user_id = auth.uid()
+        and up.health_unit_id = tests.health_unit_id
+    )
+  )
+  with check (
     exists (
       select 1
       from unit_profiles up
@@ -148,6 +172,15 @@ create policy "test_results_insert_unit"
 create policy "test_results_update_unit"
   on test_results for update
   using (
+    exists (
+      select 1
+      from tests t
+      join unit_profiles up on up.health_unit_id = t.health_unit_id
+      where t.id = test_results.test_id
+        and up.user_id = auth.uid()
+    )
+  )
+  with check (
     exists (
       select 1
       from tests t
@@ -206,6 +239,16 @@ create policy "identified_variables_update_unit"
       where tr.id = identified_variables.test_result_id
         and up.user_id = auth.uid()
     )
+  )
+  with check (
+    exists (
+      select 1
+      from test_results tr
+      join tests t on t.id = tr.test_id
+      join unit_profiles up on up.health_unit_id = t.health_unit_id
+      where tr.id = identified_variables.test_result_id
+        and up.user_id = auth.uid()
+    )
   );
 
 create policy "notifications_select_own"
@@ -214,4 +257,5 @@ create policy "notifications_select_own"
 
 create policy "notifications_update_own"
   on notifications for update
-  using (user_id = auth.uid());
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
