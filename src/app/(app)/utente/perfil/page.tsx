@@ -1,52 +1,128 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Eye, User } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
-
-const rows = [
-  { label: "ID Máquina:", value: "OKT123456" },
-  { label: "Nome Completo:", value: "Ana Pires" },
-  { label: "Email:", value: "ana.pires@exemplo.com" },
-  { label: "Número de Telemóvel:", value: "+351 965 123 456" },
-  { label: "Número de Utente:", value: "•••••••••", icon: Eye },
-  { label: "NIF:", value: "•••••••••", icon: Eye },
-  { label: "Data de Nascimento:", value: "12/08/1985" },
-];
+import { useLanguage } from "@/lib/i18n";
 
 export default function PerfilPage() {
+  const { t } = useLanguage();
+  const [profile, setProfile] = useState<{
+    name: string;
+    email: string;
+    phone?: string | null;
+    nif?: string | null;
+    birthDate?: string | null;
+    healthNumber?: string | null;
+    medicalHistory?: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch("/api/me");
+        if (!response.ok) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+        const data = (await response.json()) as {
+          user: {
+            name: string;
+            email: string;
+            patientProfile: {
+              phone?: string | null;
+              nif?: string | null;
+              birthDate?: string | null;
+              healthNumber?: string | null;
+              address?: string | null;
+            } | null;
+          };
+        };
+        setProfile({
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.patientProfile?.phone ?? null,
+          nif: data.user.patientProfile?.nif ?? null,
+          birthDate: data.user.patientProfile?.birthDate ?? null,
+          healthNumber: data.user.patientProfile?.healthNumber ?? null,
+          medicalHistory: data.user.patientProfile?.address ?? null,
+        });
+      } catch {
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const rows = [
+    { label: `${t("profile.fullName")}:`, value: profile?.name ?? t("profile.emptyValue") },
+    { label: `${t("profile.email")}:`, value: profile?.email ?? t("profile.emptyValue") },
+    { label: `${t("profile.phone")}:`, value: profile?.phone ?? t("profile.emptyValue") },
+    { label: `${t("profile.userNumber")}:`, value: profile?.healthNumber ?? t("profile.emptyValue"), icon: Eye },
+    { label: `${t("profile.nif")}:`, value: profile?.nif ?? t("profile.emptyValue"), icon: Eye },
+    {
+      label: `${t("profile.birthDate")}:`,
+      value: profile?.birthDate
+        ? new Date(profile.birthDate).toLocaleDateString()
+        : t("profile.emptyValue"),
+    },
+  ];
+
   return (
     <PageTransition>
-      <MobileShell title="Perfil" icon={<User className="h-5 w-5" />} backHref="/utente/pagina-principal">
+      <MobileShell
+        title={t("profile.title")}
+        icon={<User className="h-5 w-5" />}
+        backHref="/utente/pagina-principal"
+      >
         <Card className="divide-y divide-brand-50">
-          {rows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between px-4 py-3 text-sm">
-              <span className="font-semibold text-brand-500">{row.label}</span>
-              <div className="flex items-center gap-2 text-brand-800">
-                <span>{row.value}</span>
-                {row.icon ? <row.icon className="h-4 w-4 text-brand-300" /> : null}
-              </div>
+          {loading ? (
+            <div className="px-4 py-6 text-center text-sm text-brand-500">
+              {t("common.loading")}
             </div>
-          ))}
-          <div className="px-4 py-4">
-            <p className="text-sm font-semibold text-brand-500">Histórico Médico:</p>
-            <Card className="mt-2 bg-brand-50 p-3 text-sm text-brand-600">
-              Histórico de alergia a penicilina. Sem outras condições crónicas.
-            </Card>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3 text-sm">
-            <span className="font-semibold text-brand-500">Médico de Família:</span>
-            <span className="text-brand-800">Dr. Sofia Santos</span>
-          </div>
+          ) : (
+            <>
+              {rows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <span className="font-semibold text-brand-500">{row.label}</span>
+                  <div className="flex items-center gap-2 text-brand-800">
+                    <span>{row.value}</span>
+                    {row.icon ? <row.icon className="h-4 w-4 text-brand-300" /> : null}
+                  </div>
+                </div>
+              ))}
+              <div className="px-4 py-4">
+                <p className="text-sm font-semibold text-brand-500">
+                  {t("profile.medicalHistory")}:
+                </p>
+                <Card className="mt-2 bg-brand-50 p-3 text-sm text-brand-600">
+                  {profile?.medicalHistory ?? t("profile.emptyValue")}
+                </Card>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 text-sm">
+                <span className="font-semibold text-brand-500">
+                  {t("profile.familyDoctor")}:
+                </span>
+                <span className="text-brand-800">{t("profile.familyDoctorEmpty")}</span>
+              </div>
+            </>
+          )}
         </Card>
         <div className="mt-6 space-y-3">
           <Link href="/utente/editar-perfil">
-            <Button className="w-full">Editar Perfil</Button>
+            <Button className="w-full">{t("profile.editProfile")}</Button>
           </Link>
           <Link href="/utente/definicoes">
             <Button className="w-full" variant="outline">
-              Definições de Conta
+              {t("settings.title")}
             </Button>
           </Link>
         </div>

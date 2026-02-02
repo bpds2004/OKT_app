@@ -1,84 +1,190 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { FileText, AlertTriangle, Share2 } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
+import { useLanguage } from "@/lib/i18n";
 
-const infoRows = [
-  { label: "ID do Relatório", value: "OKT-2023-08-15-001" },
-  { label: "Nome do Paciente", value: "Ana Silva Santos" },
-  { label: "Data do Teste", value: "04/12/2025" },
-  { label: "Genes Testados", value: "BRCA1, BRCA2, TP53,..." },
-];
-
-const variants = [
-  { gene: "BRCA1", variant: "c.5266dupC", classification: "Patogênica" },
-  { gene: "TP53", variant: "c.349delT", classification: "Patogênica" },
-];
+type ReportData = {
+  id: string;
+  createdAt: string;
+  patientName: string;
+  resultSummary: string;
+  riskLevel: string;
+  variables: {
+    id: string;
+    name: string;
+    significance: string;
+    recommendation: string;
+  }[];
+};
 
 export default function ResultadoTestePage() {
+  const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get("id");
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        const response = await fetch("/api/utente/reports");
+        if (!response.ok) {
+          setReport(null);
+          setLoading(false);
+          return;
+        }
+        const data = (await response.json()) as {
+          tests: {
+            id: string;
+            createdAt: string;
+            patient: { name: string } | null;
+            result: {
+              summary: string;
+              riskLevel: string;
+              variables: {
+                id: string;
+                name: string;
+                significance: string;
+                recommendation: string;
+              }[];
+            } | null;
+          }[];
+        };
+        const selected = data.tests.find((test) => test.id === requestedId) ?? data.tests[0];
+        if (!selected || !selected.result) {
+          setReport(null);
+          setLoading(false);
+          return;
+        }
+        setReport({
+          id: selected.id,
+          createdAt: selected.createdAt,
+          patientName: selected.patient?.name ?? t("result.unknownPatient"),
+          resultSummary: selected.result.summary,
+          riskLevel: selected.result.riskLevel,
+          variables: selected.result.variables ?? [],
+        });
+      } catch {
+        setReport(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReport();
+  }, [requestedId, t]);
+
+  const mailtoHref = useMemo(() => {
+    if (!report) return "#";
+    return `mailto:?subject=${encodeURIComponent(
+      t("result.emailSubject", { id: report.id }),
+    )}&body=${encodeURIComponent(t("result.emailBody", { id: report.id }))}`;
+  }, [report, t]);
+
   return (
     <PageTransition>
-      <MobileShell title="ID:Zx78T" icon={<FileText className="h-5 w-5" />} backHref="/utente/relatorios">
-        <p className="text-center text-lg font-semibold text-emerald-500">Positivo</p>
-        <Card className="mt-4 p-4">
-          <h2 className="text-sm font-semibold text-brand-700">
-            Informações Gerais do Relatório
-          </h2>
-          <div className="mt-3 space-y-2 text-xs text-brand-600">
-            {infoRows.map((row) => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span className="font-semibold text-brand-500">{row.label}</span>
-                <span className="text-brand-800">{row.value}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <div className="mt-4 space-y-4">
-          {variants.map((variant) => (
-            <Card key={variant.gene} className="p-4">
-              <h3 className="text-sm font-semibold text-brand-700">Variáveis Identificadas</h3>
+      <MobileShell
+        title={report ? `ID:${report.id}` : t("reports.title")}
+        icon={<FileText className="h-5 w-5" />}
+        backHref="/utente/relatorios"
+      >
+        {loading ? (
+          <p className="text-center text-sm text-brand-500">{t("common.loading")}</p>
+        ) : report ? (
+          <>
+            <p className="text-center text-lg font-semibold text-emerald-500">
+              {report.riskLevel}
+            </p>
+            <Card className="mt-4 p-4">
+              <h2 className="text-sm font-semibold text-brand-700">
+                {t("result.title")}
+              </h2>
               <div className="mt-3 space-y-2 text-xs text-brand-600">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-brand-500">Gene</span>
-                  <span className="text-brand-800">{variant.gene}</span>
+                  <span className="font-semibold text-brand-500">{t("result.reportId")}</span>
+                  <span className="text-brand-800">{report.id}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-brand-500">Variante</span>
-                  <span className="text-brand-800">{variant.variant}</span>
+                  <span className="font-semibold text-brand-500">{t("result.patientName")}</span>
+                  <span className="text-brand-800">{report.patientName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-brand-500">Classificação</span>
-                  <span className="text-brand-800">{variant.classification}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-brand-500">Significado</span>
-                  <span className="text-right text-brand-800">
-                    Risco aumentado para cancro da mama e ovário
+                  <span className="font-semibold text-brand-500">{t("result.testDate")}</span>
+                  <span className="text-brand-800">
+                    {new Date(report.createdAt).toLocaleDateString()}
                   </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-brand-500">{t("result.summary")}</span>
+                  <span className="text-brand-800">{report.resultSummary}</span>
                 </div>
               </div>
             </Card>
-          ))}
-        </div>
 
-        <Card className="mt-4 border border-amber-300 bg-amber-50 p-4 text-center text-sm font-semibold text-amber-600">
-          <div className="flex items-center justify-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Consultar um geneticista ou oncologista
-          </div>
-        </Card>
+            <div className="mt-4 space-y-4">
+              {report.variables.length > 0 ? (
+                report.variables.map((variable) => (
+                  <Card key={variable.id} className="p-4">
+                    <h3 className="text-sm font-semibold text-brand-700">
+                      {t("result.variants")}
+                    </h3>
+                    <div className="mt-3 space-y-2 text-xs text-brand-600">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-brand-500">{t("result.gene")}</span>
+                        <span className="text-brand-800">{variable.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-brand-500">
+                          {t("result.classification")}
+                        </span>
+                        <span className="text-brand-800">{variable.significance}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-brand-500">
+                          {t("result.recommendation")}
+                        </span>
+                        <span className="text-right text-brand-800">
+                          {variable.recommendation}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <Card className="p-4 text-center text-xs text-brand-500">
+                  {t("result.noVariables")}
+                </Card>
+              )}
+            </div>
 
-        <div className="mt-4 space-y-3">
-          <Button className="w-full">
-            <Share2 className="mr-2 h-4 w-4" />
-            Enviar para médico
-          </Button>
-          <Button variant="outline" className="w-full">
-            Voltar
-          </Button>
-        </div>
+            <Card className="mt-4 border border-amber-300 bg-amber-50 p-4 text-center text-sm font-semibold text-amber-600">
+              <div className="flex items-center justify-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {t("result.warning")}
+              </div>
+            </Card>
+
+            <div className="mt-4 space-y-3">
+              <Button className="w-full" onClick={() => window.open(mailtoHref, "_blank")}>
+                <Share2 className="mr-2 h-4 w-4" />
+                {t("result.shareDoctor")}
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => window.history.back()}>
+                {t("result.back")}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Card className="mt-4 p-6 text-center">
+            <p className="text-sm font-semibold text-brand-700">{t("reports.emptyTitle")}</p>
+            <p className="mt-2 text-xs text-brand-500">{t("reports.emptyDescription")}</p>
+          </Card>
+        )}
       </MobileShell>
     </PageTransition>
   );
