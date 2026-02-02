@@ -8,33 +8,58 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
+import { useLanguage } from "@/lib/i18n";
 
-const reports = [
-  { id: "Zx78T", date: "04/12/2025", status: "Positivo", tone: "positive" },
-  { id: "ZW59C", date: "04/12/2025", status: "Negativo", tone: "negative" },
-  { id: "HG76C2", date: "12/11/2025", status: "Negativo", tone: "negative" },
-];
+type ReportItem = {
+  id: string;
+  createdAt: string;
+  riskLevel: string;
+};
 
 export default function RelatoriosPage() {
   const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const { t } = useLanguage();
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    const fetchReports = async () => {
+      try {
+        const response = await fetch("/api/utente/reports");
+        if (!response.ok) {
+          setReports([]);
+          setLoading(false);
+          return;
+        }
+        const data = (await response.json()) as {
+          tests: { id: string; createdAt: string; result: { riskLevel: string } | null }[];
+        };
+        const mapped = data.tests.map((test) => ({
+          id: test.id,
+          createdAt: test.createdAt,
+          riskLevel: test.result?.riskLevel ?? t("reports.pending"),
+        }));
+        setReports(mapped);
+      } catch {
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
   }, []);
 
   return (
     <PageTransition>
       <MobileShell
-        title="Relatórios"
+        title={t("reports.title")}
         icon={<FileText className="h-5 w-5" />}
         backHref="/"
       >
         <div className="mb-5 flex items-center justify-between text-sm text-brand-500">
-          <span>Ordenar por:</span>
+          <span>{t("reports.sortBy")}</span>
           <select className="rounded-full border border-brand-100 bg-white px-4 py-2 text-sm font-semibold text-brand-700 shadow-sm">
-            <option>Data (Mais Recente)</option>
-            <option>Data (Mais Antiga)</option>
+            <option>{t("reports.sortNewest")}</option>
+            <option>{t("reports.sortOldest")}</option>
           </select>
         </div>
         <div className="space-y-4">
@@ -52,32 +77,42 @@ export default function RelatoriosPage() {
                   </div>
                 </Card>
               ))
-            : reports.map((report) => (
-                <Card key={report.id} className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-                      <FileText className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-base font-semibold text-brand-800">
-                        Relatório ID:{report.id}
+            : reports.length > 0
+              ? reports.map((report) => (
+                  <Card key={report.id} className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                        <FileText className="h-5 w-5" />
                       </div>
-                      <div className="text-sm text-brand-400">{report.date}</div>
-                      <Badge
-                        variant={report.tone as "positive" | "negative"}
-                        className="mt-2"
-                      >
-                        {report.status}
-                      </Badge>
+                      <div className="flex-1">
+                        <div className="text-base font-semibold text-brand-800">
+                          {t("reports.reportId", { id: report.id })}
+                        </div>
+                        <div className="text-sm text-brand-400">
+                          {new Date(report.createdAt).toLocaleDateString()}
+                        </div>
+                        <Badge variant="neutral" className="mt-2">
+                          {report.riskLevel}
+                        </Badge>
+                      </div>
+                      <Link href={`/utente/resultado-teste?id=${report.id}`}>
+                        <Button size="sm" className="rounded-full px-4 text-sm">
+                          {t("reports.viewDetails")}
+                        </Button>
+                      </Link>
                     </div>
-                    <Link href="/utente/resultado-teste">
-                      <Button size="sm" className="rounded-full px-4 text-sm">
-                        Ver Detalhes
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))
+              : (
+                  <Card className="p-6 text-center">
+                    <p className="text-sm font-semibold text-brand-700">
+                      {t("reports.emptyTitle")}
+                    </p>
+                    <p className="mt-2 text-xs text-brand-500">
+                      {t("reports.emptyDescription")}
+                    </p>
+                  </Card>
+                )}
         </div>
       </MobileShell>
     </PageTransition>

@@ -1,43 +1,88 @@
 "use client";
 
+import { useState } from "react";
 import { Shield } from "lucide-react";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
-
-const requirements = [
-  "Pelo menos 8 caracteres",
-  "Pelo menos uma letra maiúscula",
-  "Pelo menos uma letra minúscula",
-  "Pelo menos um número",
-  "Pelo menos um caractere especial",
-];
+import { useLanguage } from "@/lib/i18n";
 
 export default function AlterarPasswordPage() {
+  const { t } = useLanguage();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(
+    null,
+  );
+
+  const requirements = [
+    t("password.requirement1"),
+    t("password.requirement2"),
+    t("password.requirement3"),
+    t("password.requirement4"),
+    t("password.requirement5"),
+  ];
+
+  const handleSave = async () => {
+    setMessage(null);
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: t("password.mismatch") });
+      return;
+    }
+    const response = await fetch("/api/auth/password", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!response.ok) {
+      setMessage({ type: "error", text: t("password.invalidCurrent") });
+      return;
+    }
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage({ type: "success", text: t("password.updateSuccess") });
+  };
+
   return (
     <PageTransition>
       <MobileShell
-        title="Alterar Password"
+        title={t("password.title")}
         icon={<Shield className="h-5 w-5" />}
         backHref="/utente/definicoes"
       >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-semibold text-brand-700">
-              Palavra-passe atual
+              {t("password.current")}
             </label>
-            <Input placeholder="Insira a sua palavra-passe atual" className="mt-2" />
+            <Input
+              placeholder={t("password.currentPlaceholder")}
+              className="mt-2"
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
           </div>
           <div>
             <label className="text-sm font-semibold text-brand-700">
-              Nova palavra-passe
+              {t("password.new")}
             </label>
-            <Input placeholder="Insira a nova palavra-passe" className="mt-2" />
+            <Input
+              placeholder={t("password.newPlaceholder")}
+              className="mt-2"
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
           </div>
           <Card className="bg-brand-50 px-4 py-4">
-            <p className="text-xs font-semibold text-brand-500">A palavra-passe deve conter:</p>
+            <p className="text-xs font-semibold text-brand-500">
+              {t("password.requirementsTitle")}
+            </p>
             <ul className="mt-3 space-y-2 text-xs text-brand-500">
               {requirements.map((item) => (
                 <li key={item} className="flex items-center gap-2">
@@ -51,14 +96,35 @@ export default function AlterarPasswordPage() {
           </Card>
           <div>
             <label className="text-sm font-semibold text-brand-700">
-              Confirmar nova palavra-passe
+              {t("password.confirm")}
             </label>
-            <Input placeholder="Confirme a nova palavra-passe" className="mt-2" />
+            <Input
+              placeholder={t("password.confirmPlaceholder")}
+              className="mt-2"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
           </div>
+          {message ? (
+            <p
+              className={`text-xs ${
+                message.type === "error" ? "text-red-500" : "text-emerald-600"
+              }`}
+            >
+              {message.text}
+            </p>
+          ) : null}
           <div className="space-y-3 pt-4">
-            <Button className="w-full">Guardar</Button>
-            <Button className="w-full" variant="outline">
-              Cancelar
+            <Button className="w-full" onClick={handleSave}>
+              {t("common.save")}
+            </Button>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => window.history.back()}
+            >
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

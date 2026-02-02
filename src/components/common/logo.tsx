@@ -1,7 +1,12 @@
+"use client";
+
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
 
 export function Logo({ className }: HTMLAttributes<HTMLDivElement>) {
+  const { t } = useLanguage();
+
   return (
     <div className={cn("flex flex-col items-center gap-2 text-brand-800", className)}>
       <div className="flex items-center gap-2">
@@ -39,7 +44,7 @@ export function Logo({ className }: HTMLAttributes<HTMLDivElement>) {
         </div>
         <div className="text-3xl font-bold tracking-tight">OKT</div>
       </div>
-      <span className="text-lg font-semibold text-brand-700">OncoKit test</span>
+      <span className="text-lg font-semibold text-brand-700">{t("common.appTagline")}</span>
     </div>
   );
 }
