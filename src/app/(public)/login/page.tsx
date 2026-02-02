@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { Mail, Lock } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const { t } = useLanguage();
@@ -37,25 +37,28 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     setAuthError(null);
-    const response = await signIn("credentials", {
-      ...data,
-      redirect: false,
+    const { data: signInData, error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
     });
-    if (response?.error) {
+    if (error || !signInData.user) {
       setAuthError(t("login.invalidCredentials"));
       return;
     }
-    const meResponse = await fetch("/api/me");
-    if (meResponse.ok) {
-      const { user } = (await meResponse.json()) as { user: { role: string } };
-      router.push(
-        user.role === "UNIDADE_SAUDE"
-          ? "/unidade/pagina-principal"
-          : "/utente/pagina-principal",
-      );
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", signInData.user.id)
+      .single();
+    if (profileError || !profile) {
+      router.push("/utente/pagina-principal");
       return;
     }
-    router.push("/utente/pagina-principal");
+    router.push(
+      profile.role === "UNIDADE_SAUDE"
+        ? "/unidade/pagina-principal"
+        : "/utente/pagina-principal",
+    );
   };
 
   return (

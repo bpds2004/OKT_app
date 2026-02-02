@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 type PatientRow = {
   id: string;
@@ -22,21 +23,22 @@ export default function PacientesPage() {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await fetch("/api/unidade/tests");
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from("tests")
+          .select("patient:profiles!tests_patient_user_id_fkey ( id, name )")
+          .order("created_at", { ascending: false });
+        if (error || !data) {
           setPatients([]);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          tests: { patient: { id: string; name: string } }[];
-        };
         const unique = new Map<string, PatientRow>();
-        data.tests.forEach((test) => {
-          if (test.patient) {
-            unique.set(test.patient.id, {
-              id: test.patient.id,
-              name: test.patient.name,
+        data.forEach((test) => {
+          const patient = Array.isArray(test.patient) ? test.patient[0] : test.patient;
+          if (patient) {
+            unique.set(patient.id, {
+              id: patient.id,
+              name: patient.name,
             });
           }
         });

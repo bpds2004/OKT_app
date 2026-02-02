@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 type ReportItem = {
   id: string;
@@ -24,20 +25,25 @@ export default function RelatoriosPage() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const response = await fetch("/api/utente/reports");
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from("tests")
+          .select("id, created_at, test_results(risk_level)")
+          .order("created_at", { ascending: false });
+        if (error || !data) {
           setReports([]);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          tests: { id: string; createdAt: string; result: { riskLevel: string } | null }[];
-        };
-        const mapped = data.tests.map((test) => ({
-          id: test.id,
-          createdAt: test.createdAt,
-          riskLevel: test.result?.riskLevel ?? t("reports.pending"),
-        }));
+        const mapped = data.map((test) => {
+          const result = Array.isArray(test.test_results)
+            ? test.test_results[0]
+            : test.test_results;
+          return {
+            id: test.id,
+            createdAt: test.created_at,
+            riskLevel: result?.risk_level ?? t("reports.pending"),
+          };
+        });
         setReports(mapped);
       } catch {
         setReports([]);

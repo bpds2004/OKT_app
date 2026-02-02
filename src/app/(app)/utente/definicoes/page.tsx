@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
 import {
   Bell,
   Lock,
@@ -17,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 const STORAGE_KEY = "okt_settings";
 
@@ -40,7 +40,8 @@ export default function DefinicoesPage() {
   }, [notifications]);
 
   const handleLogout = () => {
-    signOut({ callbackUrl: "/" });
+    supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   return (

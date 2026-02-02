@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function UnidadeTesteRealizadoPage() {
   const { t } = useLanguage();
@@ -21,21 +22,23 @@ export default function UnidadeTesteRealizadoPage() {
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const response = await fetch("/api/unidade/tests");
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from("tests")
+          .select("id, created_at, patient:profiles!tests_patient_user_id_fkey ( name )")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error || !data) {
           setLatestTest(null);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          tests: { id: string; createdAt: string; patient: { name: string } | null }[];
-        };
-        const test = data.tests[0];
+        const test = data[0];
+        const patient = Array.isArray(test?.patient) ? test.patient[0] : test?.patient;
         if (test) {
           setLatestTest({
             id: test.id,
-            createdAt: test.createdAt,
-            patientName: test.patient?.name ?? t("result.unknownPatient"),
+            createdAt: test.created_at,
+            patientName: patient?.name ?? t("result.unknownPatient"),
           });
         } else {
           setLatestTest(null);

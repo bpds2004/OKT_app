@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function NovoTestePage() {
   const { t } = useLanguage();
@@ -50,18 +51,27 @@ export default function NovoTestePage() {
 
   const handleCreateTest = async () => {
     setMessage(null);
-    const response = await fetch("/api/utente/tests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+    const { data: unitData, error: unitError } = await supabase
+      .from("health_units")
+      .select("id")
+      .limit(1)
+      .maybeSingle();
+    if (unitError || !unitData) {
+      setMessage(t("novoTeste.noHealthUnit"));
+      return;
+    }
+    const { data: userInfo } = await supabase.auth.getUser();
+    if (!userInfo.user) {
+      setMessage(t("novoTeste.createError"));
+      return;
+    }
+    const { error: testError } = await supabase.from("tests").insert({
+      patient_user_id: userInfo.user.id,
+      health_unit_id: unitData.id,
+      status: "PENDING",
     });
-    if (!response.ok) {
-      const data = (await response.json()) as { error?: string };
-      if (data.error === "NO_HEALTH_UNIT") {
-        setMessage(t("novoTeste.noHealthUnit"));
-      } else {
-        setMessage(t("novoTeste.createError"));
-      }
+    if (testError) {
+      setMessage(t("novoTeste.createError"));
       return;
     }
     setMessage(t("novoTeste.createdSuccess"));

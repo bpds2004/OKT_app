@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 type NotificationItem = {
   id: string;
@@ -32,14 +33,24 @@ export default function UnidadeNotificacoesPage() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch("/api/notifications");
-      if (!response.ok) {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("id, title, message, read, created_at")
+        .order("created_at", { ascending: false });
+      if (error || !data) {
         setItems([]);
         setLoading(false);
         return;
       }
-      const data = (await response.json()) as { notifications: NotificationItem[] };
-      setItems(data.notifications ?? []);
+      setItems(
+        data.map((item) => ({
+          id: item.id,
+          title: item.title,
+          message: item.message,
+          read: item.read,
+          createdAt: item.created_at,
+        })),
+      );
     } catch {
       setItems([]);
     } finally {
@@ -48,12 +59,15 @@ export default function UnidadeNotificacoesPage() {
   };
 
   const markAllAsRead = async () => {
-    await fetch("/api/notifications/read-all", { method: "POST" });
+    await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("read", false);
     await fetchNotifications();
   };
 
   const markAsRead = async (id: string) => {
-    await fetch(`/api/notifications/${id}`, { method: "PATCH" });
+    await supabase.from("notifications").update({ read: true }).eq("id", id);
     await fetchNotifications();
   };
 

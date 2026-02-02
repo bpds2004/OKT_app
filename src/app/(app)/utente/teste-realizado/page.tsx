@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/common/page-transition";
 import { useLanguage } from "@/lib/i18n";
+import { supabase } from "@/lib/supabase/client";
 
 export default function TesteRealizadoPage() {
   const { t } = useLanguage();
@@ -17,16 +18,25 @@ export default function TesteRealizadoPage() {
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const response = await fetch("/api/utente/tests");
-        if (!response.ok) {
+        const { data, error } = await supabase
+          .from("tests")
+          .select("id, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (error || !data) {
           setLatestTest(null);
           setLoading(false);
           return;
         }
-        const data = (await response.json()) as {
-          tests: { id: string; createdAt: string }[];
-        };
-        setLatestTest(data.tests[0] ?? null);
+        const latest = data[0] ?? null;
+        setLatestTest(
+          latest
+            ? {
+                id: latest.id,
+                createdAt: latest.created_at,
+              }
+            : null,
+        );
       } catch {
         setLatestTest(null);
       } finally {
