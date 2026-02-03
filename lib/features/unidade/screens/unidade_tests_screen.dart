@@ -1,58 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/widgets/okt_scaffold.dart';
-import '../../../data/repositories/providers.dart';
-import '../../auth/controllers/auth_controller.dart';
+import '../../../data/repositories/auth_repo.dart';
+import '../../../data/repositories/profile_repo.dart';
+import '../../../data/repositories/tests_repo.dart';
+
+final unidadeHealthUnitProvider = FutureProvider<String?>((ref) async {
+  final userId = ref.watch(authRepoProvider).currentUser?.id;
+  if (userId == null) return null;
+  final profile = await ref.watch(profileRepoProvider).fetchUnitProfile(userId);
+  return profile['health_unit_id'] as String?;
+});
+
+final unidadeTestsProvider = FutureProvider((ref) async {
+  final unitId = await ref.watch(unidadeHealthUnitProvider.future);
+  if (unitId == null) return <Map<String, dynamic>>[];
+  return ref.watch(testsRepoProvider).fetchUnidadeTests(unitId);
+});
 
 class UnidadeTestsScreen extends ConsumerWidget {
   const UnidadeTestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authRepoProvider).currentUser;
-    if (user == null) {
-      return const OktScaffold(title: 'Testes', child: Text('Sem sessão.'));
-    }
+    final tests = ref.watch(unidadeTestsProvider);
 
-    return OktScaffold(
-      title: 'Testes',
-      child: FutureBuilder<Map<String, dynamic>?>(
-        future: ref.read(profileRepoProvider).fetchUnitProfile(user.id),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+    return Scaffold(
+      appBar: AppBar(title: const Text('Testes')),
+      body: tests.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return const Center(child: Text('Sem testes atribuídos.'));
           }
-          final unitProfile = snapshot.data;
-          if (unitProfile == null) {
-            return const Center(child: Text('Unidade não encontrada.'));
-          }
-          final healthUnitId = unitProfile['health_unit_id'] as String;
-          return FutureBuilder<List<Map<String, dynamic>>>(
-            future: ref.read(testsRepoProvider).fetchTestsForUnit(healthUnitId),
-            builder: (context, testsSnapshot) {
-              if (!testsSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final tests = testsSnapshot.data!;
-              if (tests.isEmpty) {
-                return const Center(child: Text('Sem testes pendentes.'));
-              }
-              return ListView.separated(
-                itemCount: tests.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final test = tests[index];
-                  return ListTile(
-                    title: Text('Teste ${test['id']}'),
-                    subtitle: Text('Estado: ${test['status']}'),
-                    onTap: () => context.go('/unidade/testes/${test['id']}'),
-                  );
-                },
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final test = items[index];
+              return Card(
+                child: ListTile(
+                  title: Text('Teste ${test['id']}'),
+                  subtitle: Text('Status: ${test['status']}'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/unidade/testes/${test['id']}'),
+                ),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text('Erro: $error')),
       ),
     );
   }

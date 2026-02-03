@@ -1,20 +1,19 @@
 # OKT Mobile (Flutter)
 
-Aplicação mobile 100% Flutter para Android, com autenticação Supabase, BLE e duas áreas (Utente e Unidade de Saúde).
+Aplicação mobile 100% Flutter para Android (Play Store), com Supabase Auth, BLE e duas áreas: Utente e Unidade de Saúde.
 
-## ✅ Requisitos
+## ✅ Stack
 
 - Flutter (stable)
-- Conta Supabase
-- Android Studio (ou outro ambiente para Android)
+- Supabase (Auth + Postgres)
+- Packages: supabase_flutter, flutter_blue_plus, go_router, flutter_riverpod, flutter_dotenv, intl
 
 ## 🧱 Configuração Supabase
 
 1. Criar um projeto no Supabase.
-2. Executar o schema:
+2. Executar o schema no SQL Editor:
 
 ```sql
--- no SQL Editor do Supabase
 \i supabase/schema.sql
 ```
 
@@ -24,7 +23,13 @@ Aplicação mobile 100% Flutter para Android, com autenticação Supabase, BLE e
 \i supabase/policies.sql
 ```
 
-4. Criar um ficheiro `.env` na raiz do projeto:
+4. (Opcional) Inserir os 5 artigos obrigatórios:
+
+```sql
+\i supabase/seed_articles.sql
+```
+
+5. Criar um ficheiro `.env` na raiz do projeto (não commitar):
 
 ```
 SUPABASE_URL=
@@ -33,12 +38,14 @@ SUPABASE_ANON_KEY=
 
 > ⚠️ Nunca usar a `service_role key` no client.
 
-## ▶️ Executar
+## ▶️ Executar localmente
 
 ```bash
 flutter pub get
 flutter run
 ```
+
+Abra o projeto no Android Studio e selecione um dispositivo físico/emulador Android.
 
 ## 📱 Build Play Store (AAB)
 
@@ -46,7 +53,7 @@ flutter run
 flutter build appbundle
 ```
 
-## 📂 Estrutura
+## 📂 Estrutura do projeto
 
 ```
 lib/
@@ -57,13 +64,14 @@ lib/
   core/
     env.dart
     theme/
-    okt_theme.dart
+      okt_theme.dart
     widgets/
   data/
     supabase/
       supabase_client.dart
     repositories/
       auth_repo.dart
+      articles_repo.dart
       profile_repo.dart
       tests_repo.dart
       results_repo.dart
@@ -72,6 +80,8 @@ lib/
     auth/
       screens/
       controllers/
+    articles/
+      screens/
     ble/
       screens/
       controllers/
@@ -86,4 +96,5 @@ lib/
 supabase/
   schema.sql
   policies.sql
+  seed_articles.sql
 ```

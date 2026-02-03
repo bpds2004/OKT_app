@@ -1,45 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/widgets/okt_scaffold.dart';
-import '../../../data/repositories/providers.dart';
-import '../../auth/controllers/auth_controller.dart';
+import '../../../data/repositories/auth_repo.dart';
+import '../../../data/repositories/tests_repo.dart';
+
+final utenteTestsProvider = FutureProvider((ref) async {
+  final userId = ref.watch(authRepoProvider).currentUser?.id;
+  if (userId == null) return <Map<String, dynamic>>[];
+  return ref.watch(testsRepoProvider).fetchUtenteTests(userId);
+});
 
 class UtenteReportsScreen extends ConsumerWidget {
   const UtenteReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authRepoProvider).currentUser;
-    if (user == null) {
-      return const OktScaffold(title: 'Relatórios', child: Text('Sem sessão.'));
-    }
+    final tests = ref.watch(utenteTestsProvider);
 
-    return OktScaffold(
-      title: 'Relatórios',
-      child: FutureBuilder<List<Map<String, dynamic>>>(
-        future: ref.read(testsRepoProvider).fetchTestsForUser(user.id),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+    return Scaffold(
+      appBar: AppBar(title: const Text('Relatórios')),
+      body: tests.when(
+        data: (items) {
+          if (items.isEmpty) {
+            return const Center(child: Text('Sem relatórios disponíveis.'));
           }
-          final tests = snapshot.data!;
-          if (tests.isEmpty) {
-            return const Center(child: Text('Sem testes registados.'));
-          }
-          return ListView.separated(
-            itemCount: tests.length,
-            separatorBuilder: (_, __) => const Divider(),
+          return ListView.builder(
+            itemCount: items.length,
             itemBuilder: (context, index) {
-              final test = tests[index];
-              return ListTile(
-                title: Text('Teste ${test['id']}'),
-                subtitle: Text('Estado: ${test['status']}'),
-                onTap: () => context.go('/utente/relatorios/${test['id']}'),
+              final test = items[index];
+              return Card(
+                child: ListTile(
+                  title: Text('Teste ${test['id']}'),
+                  subtitle: Text('Status: ${test['status']}'),
+                  onTap: () => context.go('/utente/relatorios/${test['id']}'),
+                ),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text('Erro: $error')),
       ),
     );
   }
