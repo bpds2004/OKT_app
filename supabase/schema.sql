@@ -60,3 +60,14 @@ create table if not exists notifications (
   read boolean default false,
   created_at timestamp default now()
 );
+
+create table if not exists articles (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  excerpt text,
+  content text not null,
+  cover_url text,
+  published boolean not null default false,
+  published_at timestamp default now()
+);

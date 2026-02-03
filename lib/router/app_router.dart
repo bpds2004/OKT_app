@@ -18,9 +18,11 @@ import '../features/unidade/screens/unidade_test_detail_screen.dart';
 import '../features/unidade/screens/unidade_create_result_screen.dart';
 import '../features/unidade/screens/unidade_notifications_screen.dart';
 import '../features/unidade/screens/unidade_profile_screen.dart';
+import '../features/articles/screens/articles_list_screen.dart';
+import '../features/articles/screens/article_detail_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authStream = ref.watch(authRepoProvider).authStateChanges;
+  final authStream = ref.watch(authStateProvider.stream);
   final roleFuture = ref.watch(profileRoleProvider);
 
   return GoRouter(
@@ -125,6 +127,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/unidade/perfil',
         builder: (context, state) => const UnidadeProfileScreen(),
+      ),
+      GoRoute(
+        path: '/artigos',
+        builder: (context, state) => const ArticlesListScreen(),
+      ),
+      GoRoute(
+        path: '/artigos/:slug',
+        builder: (context, state) => ArticleDetailScreen(
+          slug: state.pathParameters['slug']!,
+        ),
       ),
     ],
   );
