@@ -36,6 +36,21 @@ class UnidadeHomeScreen extends ConsumerWidget {
           ),
           Card(
             child: ListTile(
+              title: const Text('Novos testes'),
+              subtitle: const Text('Pendentes para revisão'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/unidade/novo-teste'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              title: const Text('Pacientes'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/unidade/pacientes'),
+            ),
+          ),
+          Card(
+            child: ListTile(
               title: const Text('Notificações'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.go('/unidade/notificacoes'),

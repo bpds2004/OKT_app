@@ -42,6 +42,19 @@ class TestsRepository {
     return (data as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
+  Future<List<Map<String, dynamic>>> fetchUnidadeTestsByStatus({
+    required String healthUnitId,
+    required String status,
+  }) async {
+    final data = await _client
+        .from('tests')
+        .select('id,status,created_at,patient_user_id')
+        .eq('health_unit_id', healthUnitId)
+        .eq('status', status)
+        .order('created_at', ascending: false);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
   Future<Map<String, dynamic>> fetchTest(String testId) async {
     return _client.from('tests').select().eq('id', testId).single();
   }

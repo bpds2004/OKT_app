@@ -34,6 +34,10 @@ class AuthRepository {
   Future<void> signOut() {
     return _client.auth.signOut();
   }
+
+  Future<void> updatePassword(String password) {
+    return _client.auth.updateUser(UserAttributes(password: password));
+  }
 }
 
 final authRepoProvider = Provider<AuthRepository>(

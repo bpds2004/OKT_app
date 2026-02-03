@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/repositories/auth_repo.dart';
 import '../../../data/repositories/profile_repo.dart';
 
@@ -19,22 +20,6 @@ class UtenteProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _UtenteProfileScreenState extends ConsumerState<UtenteProfileScreen> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _nifController = TextEditingController();
-  final _birthController = TextEditingController();
-  final _addressController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    _nifController.dispose();
-    _birthController.dispose();
-    _addressController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(utenteProfileProvider);
@@ -43,63 +28,29 @@ class _UtenteProfileScreenState extends ConsumerState<UtenteProfileScreen> {
       appBar: AppBar(title: const Text('Perfil')),
       body: profileAsync.when(
         data: (profile) {
-          if (_nameController.text.isEmpty) {
-            _nameController.text = profile['name'] ?? '';
-            _phoneController.text = profile['phone'] ?? '';
-            _nifController.text = profile['nif'] ?? '';
-            _birthController.text = profile['birth_date'] ?? '';
-            _addressController.text = profile['address'] ?? '';
-          }
-
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Nome'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _phoneController,
-                  decoration: const InputDecoration(labelText: 'Telefone'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _nifController,
-                  decoration: const InputDecoration(labelText: 'NIF'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _birthController,
-                  decoration: const InputDecoration(labelText: 'Data de nascimento'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(labelText: 'Morada'),
-                ),
+                Text('Nome: ${profile['name'] ?? ''}'),
+                const SizedBox(height: 8),
+                Text('Telefone: ${profile['phone'] ?? ''}'),
+                const SizedBox(height: 8),
+                Text('NIF: ${profile['nif'] ?? ''}'),
+                const SizedBox(height: 8),
+                Text('Data de nascimento: ${profile['birth_date'] ?? ''}'),
+                const SizedBox(height: 8),
+                Text('Morada: ${profile['address'] ?? ''}'),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () async {
-                    final userId = ref.read(authRepoProvider).currentUser?.id;
-                    if (userId == null) return;
-                    await ref.read(profileRepoProvider).updateProfile(
-                          userId: userId,
-                          name: _nameController.text.trim(),
-                        );
-                    await ref.read(profileRepoProvider).updatePatientProfile(
-                          userId: userId,
-                          phone: _phoneController.text.trim(),
-                          nif: _nifController.text.trim(),
-                          birthDate: _birthController.text.trim(),
-                          address: _addressController.text.trim(),
-                        );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Perfil atualizado.')),
-                    );
-                  },
-                  child: const Text('Guardar'),
+                  onPressed: () => context.go('/utente/editar-perfil'),
+                  child: const Text('Editar perfil'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => context.go('/definicoes'),
+                  child: const Text('Definições'),
                 ),
               ],
             ),

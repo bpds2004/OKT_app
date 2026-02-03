@@ -96,6 +96,12 @@ class ProfileRepository {
     return (data as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
+  Future<List<Map<String, dynamic>>> fetchProfilesByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+    final data = await _client.from('profiles').select('id,name').inFilter('id', ids);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
   Future<void> updateProfile({
     required String userId,
     required String name,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../controllers/unidade_test_controller.dart';
 
 class UnidadeCreateResultScreen extends ConsumerStatefulWidget {
@@ -101,9 +102,9 @@ class _UnidadeCreateResultScreenState extends ConsumerState<UnidadeCreateResultS
                             riskLevel: _riskController.text,
                             variables: _variables,
                           );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Resultado criado.')),
-                      );
+                      if (context.mounted) {
+                        context.go('/unidade/teste-realizado');
+                      }
                     },
               child: state.isLoading
                   ? const CircularProgressIndicator()

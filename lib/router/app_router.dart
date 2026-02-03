@@ -20,6 +20,17 @@ import '../features/unidade/screens/unidade_notifications_screen.dart';
 import '../features/unidade/screens/unidade_profile_screen.dart';
 import '../features/articles/screens/articles_list_screen.dart';
 import '../features/articles/screens/article_detail_screen.dart';
+import '../features/settings/screens/settings_screen.dart';
+import '../features/settings/screens/language_screen.dart';
+import '../features/settings/screens/privacy_screen.dart';
+import '../features/settings/screens/change_password_screen.dart';
+import '../features/settings/screens/tutorial_screen.dart';
+import '../features/settings/screens/tutorial_step2_screen.dart';
+import '../features/utente/screens/utente_edit_profile_screen.dart';
+import '../features/utente/screens/utente_test_completed_screen.dart';
+import '../features/unidade/screens/unidade_test_completed_screen.dart';
+import '../features/unidade/screens/unidade_patients_screen.dart';
+import '../features/unidade/screens/unidade_new_tests_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authStream = ref.watch(authStateProvider.stream);
@@ -33,7 +44,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.uri.toString();
 
       if (!loggedIn) {
-        if (location == '/welcome' || location == '/login' || location == '/register') {
+        final publicRoutes = [
+          '/welcome',
+          '/login',
+          '/register',
+          '/tutorial',
+          '/tutorial2',
+          '/privacidade',
+        ];
+        if (publicRoutes.contains(location)) {
           return null;
         }
         return '/welcome';
@@ -101,8 +120,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const UtenteProfileScreen(),
       ),
       GoRoute(
+        path: '/utente/editar-perfil',
+        builder: (context, state) => const UtenteEditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/utente/teste-realizado',
+        builder: (context, state) => const UtenteTestCompletedScreen(),
+      ),
+      GoRoute(
         path: '/unidade/home',
         builder: (context, state) => const UnidadeHomeScreen(),
+      ),
+      GoRoute(
+        path: '/unidade/novo-teste',
+        builder: (context, state) => const UnidadeNewTestsScreen(),
       ),
       GoRoute(
         path: '/unidade/testes',
@@ -129,6 +160,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const UnidadeProfileScreen(),
       ),
       GoRoute(
+        path: '/unidade/pacientes',
+        builder: (context, state) => const UnidadePatientsScreen(),
+      ),
+      GoRoute(
+        path: '/unidade/teste-realizado',
+        builder: (context, state) => const UnidadeTestCompletedScreen(),
+      ),
+      GoRoute(
         path: '/artigos',
         builder: (context, state) => const ArticlesListScreen(),
       ),
@@ -137,6 +176,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ArticleDetailScreen(
           slug: state.pathParameters['slug']!,
         ),
+      ),
+      GoRoute(
+        path: '/definicoes',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/idioma',
+        builder: (context, state) => const LanguageScreen(),
+      ),
+      GoRoute(
+        path: '/privacidade',
+        builder: (context, state) => const PrivacyScreen(),
+      ),
+      GoRoute(
+        path: '/alterar-password',
+        builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/tutorial',
+        builder: (context, state) => const TutorialScreen(),
+      ),
+      GoRoute(
+        path: '/tutorial2',
+        builder: (context, state) => const TutorialStep2Screen(),
       ),
     ],
   );

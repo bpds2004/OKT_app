@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../data/repositories/auth_repo.dart';
 import '../../../data/repositories/profile_repo.dart';
 
@@ -19,14 +20,6 @@ class UnidadeProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _UnidadeProfileScreenState extends ConsumerState<UnidadeProfileScreen> {
-  final _nameController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(unidadeProfileProvider);
@@ -35,34 +28,18 @@ class _UnidadeProfileScreenState extends ConsumerState<UnidadeProfileScreen> {
       appBar: AppBar(title: const Text('Perfil da Unidade')),
       body: profileAsync.when(
         data: (profile) {
-          if (_nameController.text.isEmpty) {
-            _nameController.text = profile['name'] ?? '';
-          }
-
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Nome do utilizador'),
-                ),
-                const SizedBox(height: 16),
+                Text('Nome do utilizador: ${profile['name'] ?? ''}'),
+                const SizedBox(height: 12),
                 Text('Health Unit ID: ${profile['health_unit_id'] ?? ''}'),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () async {
-                    final userId = ref.read(authRepoProvider).currentUser?.id;
-                    if (userId == null) return;
-                    await ref.read(profileRepoProvider).updateProfile(
-                          userId: userId,
-                          name: _nameController.text.trim(),
-                        );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Perfil atualizado.')),
-                    );
-                  },
-                  child: const Text('Guardar'),
+                  onPressed: () => context.go('/definicoes'),
+                  child: const Text('Definições'),
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../ble/controllers/ble_controller.dart';
 import '../controllers/utente_test_controller.dart';
 import '../../../data/repositories/profile_repo.dart';
@@ -185,6 +186,9 @@ class _UtenteNewTestScreenState extends ConsumerState<UtenteNewTestScreen> {
                             rawData: bleState.rawData,
                           );
                       await bleController.clearData();
+                      if (context.mounted) {
+                        context.go('/utente/teste-realizado');
+                      }
                     },
               icon: const Icon(Icons.cloud_upload),
               label: const Text('Guardar no Supabase'),
