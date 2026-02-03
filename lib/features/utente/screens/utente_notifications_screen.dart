@@ -1,45 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/widgets/okt_scaffold.dart';
-import '../../../data/repositories/providers.dart';
-import '../../auth/controllers/auth_controller.dart';
+import '../../../data/repositories/auth_repo.dart';
+import '../../../data/repositories/notifications_repo.dart';
+
+final utenteNotificationsProvider = FutureProvider((ref) async {
+  final userId = ref.watch(authRepoProvider).currentUser?.id;
+  if (userId == null) return <Map<String, dynamic>>[];
+  return ref.watch(notificationsRepoProvider).fetchNotifications(userId);
+});
 
 class UtenteNotificationsScreen extends ConsumerWidget {
   const UtenteNotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authRepoProvider).currentUser;
-    if (user == null) {
-      return const OktScaffold(title: 'Notificações', child: Text('Sem sessão.'));
-    }
-    return OktScaffold(
-      title: 'Notificações',
-      child: FutureBuilder<List<Map<String, dynamic>>>(
-        future: ref.read(notificationsRepoProvider).fetchNotifications(user.id),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final notifications = snapshot.data!;
-          if (notifications.isEmpty) {
+    final notifications = ref.watch(utenteNotificationsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Notificações')),
+      body: notifications.when(
+        data: (items) {
+          if (items.isEmpty) {
             return const Center(child: Text('Sem notificações.'));
           }
-          return ListView.separated(
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) => const Divider(),
+          return ListView.builder(
+            itemCount: items.length,
             itemBuilder: (context, index) {
-              final item = notifications[index];
-              return ListTile(
-                title: Text(item['title']),
-                subtitle: Text(item['message']),
-                trailing: item['read'] == true
-                    ? const Icon(Icons.done)
-                    : const Icon(Icons.new_releases),
+              final notification = items[index];
+              return Card(
+                child: ListTile(
+                  title: Text(notification['title'] as String),
+                  subtitle: Text(notification['message'] as String),
+                  trailing: notification['read'] == true
+                      ? const Icon(Icons.mark_email_read)
+                      : const Icon(Icons.mark_email_unread),
+                  onTap: () => ref
+                      .read(notificationsRepoProvider)
+                      .markRead(notification['id'] as String, true),
+                ),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text('Erro: $error')),
       ),
     );
   }

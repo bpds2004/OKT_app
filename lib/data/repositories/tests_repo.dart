@@ -1,45 +1,72 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase/supabase_client.dart';
 
-class TestsRepo {
-  Future<List<Map<String, dynamic>>> fetchTestsForUser(String userId) async {
-    final response = await SupabaseClientFactory.client
-        .from('tests')
-        .select()
-        .eq('patient_user_id', userId)
-        .order('created_at', ascending: false);
-    return response;
-  }
+class TestsRepository {
+  TestsRepository(this._client);
 
-  Future<List<Map<String, dynamic>>> fetchTestsForUnit(String healthUnitId) async {
-    final response = await SupabaseClientFactory.client
-        .from('tests')
-        .select()
-        .eq('health_unit_id', healthUnitId)
-        .order('created_at', ascending: false);
-    return response;
-  }
+  final SupabaseClient _client;
 
-  Future<Map<String, dynamic>> createTest(Map<String, dynamic> data) async {
-    final response = await SupabaseClientFactory.client
+  Future<Map<String, dynamic>> createTest({
+    required String patientUserId,
+    required String healthUnitId,
+    String status = 'PENDING',
+  }) async {
+    final data = await _client
         .from('tests')
-        .insert(data)
+        .insert({
+          'patient_user_id': patientUserId,
+          'health_unit_id': healthUnitId,
+          'status': status,
+        })
         .select()
         .single();
-    return response;
+    return data;
   }
 
-  Future<void> updateStatus(String testId, String status) async {
-    await SupabaseClientFactory.client
+  Future<List<Map<String, dynamic>>> fetchUtenteTests(String userId) async {
+    final data = await _client
         .from('tests')
-        .update({'status': status})
-        .eq('id', testId);
+        .select('id,status,created_at,health_unit_id')
+        .eq('patient_user_id', userId)
+        .order('created_at', ascending: false);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>?> fetchTest(String testId) async {
-    return SupabaseClientFactory.client
+  Future<List<Map<String, dynamic>>> fetchUnidadeTests(String healthUnitId) async {
+    final data = await _client
         .from('tests')
-        .select()
-        .eq('id', testId)
-        .maybeSingle();
+        .select('id,status,created_at,patient_user_id')
+        .eq('health_unit_id', healthUnitId)
+        .order('created_at', ascending: false);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchUnidadeTestsByStatus({
+    required String healthUnitId,
+    required String status,
+  }) async {
+    final data = await _client
+        .from('tests')
+        .select('id,status,created_at,patient_user_id')
+        .eq('health_unit_id', healthUnitId)
+        .eq('status', status)
+        .order('created_at', ascending: false);
+    return (data as List<dynamic>).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> fetchTest(String testId) async {
+    return _client.from('tests').select().eq('id', testId).single();
+  }
+
+  Future<void> updateStatus({
+    required String testId,
+    required String status,
+  }) {
+    return _client.from('tests').update({'status': status}).eq('id', testId);
   }
 }
+
+final testsRepoProvider = Provider<TestsRepository>(
+  (ref) => TestsRepository(SupabaseClientFactory.client),
+);

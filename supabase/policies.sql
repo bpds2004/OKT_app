@@ -6,6 +6,7 @@ alter table tests enable row level security;
 alter table test_results enable row level security;
 alter table identified_variables enable row level security;
 alter table notifications enable row level security;
+alter table articles enable row level security;
 
 create policy "profiles_select_own" on profiles
   for select
@@ -219,3 +220,7 @@ create policy "notifications_update_own" on notifications
   for update
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
+
+create policy "articles_select_published" on articles
+  for select
+  using (published = true);
