@@ -98,3 +98,5 @@ supabase/
   policies.sql
   seed_articles.sql
 ```
+
+> Nota: o template legado `okt_app/` foi removido para evitar duplicação do projeto.
