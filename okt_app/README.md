@@ -1,16 +1,77 @@
-# okt_app
+# OKT App (OncoKit Test)
 
-A new Flutter project.
+Aplicação Flutter para o projeto OKT com dois perfis: **Utente** e **Unidade de Saúde**. A app usa Firebase para autenticação e dados persistentes multi-dispositivo, garantindo sincronização e segurança de acesso por role.
 
-## Getting Started
+## Requisitos
+- Flutter 3.10+
+- Conta Firebase
+- Android Studio/Xcode (para builds nativos)
 
-This project is a starting point for a Flutter application.
+## Configuração do Firebase
+1. Crie um projeto no Firebase.
+2. Ative **Authentication** (Email/Password).
+3. Crie o Firestore e o Storage.
+4. Configure as aplicações Android/iOS:
+   - **Android**: adicione `google-services.json` em `android/app/`.
+   - **iOS**: adicione `GoogleService-Info.plist` em `ios/Runner/`.
+5. Atualize `lib/core/firebase_options.dart` com as credenciais reais do projeto.
+6. Publique as regras do Firestore:
+   ```
+   firebase deploy --only firestore:rules
+   ```
+7. Confirme no Firebase Console o **package name** (`com.example.okt_app` no `AndroidManifest.xml`) e o **bundle id** do iOS antes de gerar os ficheiros.
 
-A few resources to get you started if this is your first Flutter project:
+> **Nota**: Não incluímos ficheiros `google-services.json` ou `GoogleService-Info.plist` no repositório por segurança. Adicione-os localmente.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Dependências
+Este projeto usa:
+- `firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`
+- `flutter_riverpod`
+- `go_router`
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Instale com:
+```
+flutter pub get
+```
+
+## Executar
+```
+flutter run
+```
+
+## Build Release (Play Store)
+```
+flutter build appbundle
+```
+
+## Android (Google Services)
+- Plugin `com.google.gms.google-services` já aplicado em `android/app/build.gradle.kts`.
+- Compile/Target SDK definidos para 34 e minSdk 21 (compatível com Firebase).
+- Se alterar o `applicationId`, atualize também no Firebase Console.
+
+## iOS (CocoaPods)
+- `ios/Podfile` definido com deployment target 13.0.
+- Após adicionar `GoogleService-Info.plist`, execute:
+  ```
+  cd ios && pod install
+  ```
+
+## Estrutura
+```
+lib/
+  core/
+    animations/
+    models/
+    routes/
+    theme/
+    widgets/
+  features/
+    auth/
+    utente/
+    unidade_saude/
+```
+
+## Segurança e privacidade
+- Regras Firestore em `firebase/firestore.rules`.
+- Utente lê/escreve apenas os próprios dados.
+- Unidade de saúde lê dados atribuídos conforme `unidadeId` nos documentos.

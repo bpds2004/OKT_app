@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && userDoc().data.role == role;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /utenteProfiles/{userId} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == userId
+        && hasRole('utente');
+    }
+
+    match /healthUnitProfiles/{userId} {
+      allow read, write: if isSignedIn()
+        && request.auth.uid == userId
+        && hasRole('unidade');
+    }
+
+    match /tests/{testId} {
+      allow read, write: if isSignedIn()
+        && (request.auth.uid == resource.data.utenteId
+            || request.auth.uid == resource.data.unidadeId);
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn()
+        && (request.auth.uid == resource.data.utenteId
+            || request.auth.uid == resource.data.unidadeId);
+      allow write: if false;
+    }
+
+    match /notifications/{userId}/items/{notificationId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}
